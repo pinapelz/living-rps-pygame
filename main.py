@@ -13,6 +13,7 @@ class State(Enum):
 pygame.init()
 
 
+# Constants
 WIDTH, HEIGHT = 800, 600
 FPS = 60
 BALL_RADIUS = 10
@@ -20,51 +21,60 @@ NUM_BALLS = 40
 BALL_SPEED = 1 
 COUNT = 0
 CHANCE_OF_CHASE = 0.6
-
+NUM_PLAYERS_EACH_TEAM = 20
 # Colors
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+BLACK=(0,0,0)
 
 # Images
-ROCK_IMAGE = pygame.transform.scale(pygame.image.load("rock.svg"), (BALL_RADIUS*2, BALL_RADIUS*2))
-PAPER_IMAGE = pygame.transform.scale(pygame.image.load("paper.png"), (BALL_RADIUS*2, BALL_RADIUS*2))
-SCISSORS_IMAGE = pygame.transform.scale(pygame.image.load("scissors.svg"), (BALL_RADIUS*2, BALL_RADIUS*2))
+ROCK_IMAGE = pygame.transform.scale(pygame.image.load("graphics/rock.svg"), (BALL_RADIUS*2, BALL_RADIUS*2))
+PAPER_IMAGE = pygame.transform.scale(pygame.image.load("graphics/paper.png"), (BALL_RADIUS*2, BALL_RADIUS*2))
+SCISSORS_IMAGE = pygame.transform.scale(pygame.image.load("graphics/scissors.svg"), (BALL_RADIUS*2, BALL_RADIUS*2))
+
+# Font
+font = pygame.font.Font(None, 36)
 
 
 # Screen setup
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Living RPS Clone")
-
+game_active = True
 players = []
 
 def reset_game():
     global players
+    global game_active
     players = []
-    for _ in range(NUM_BALLS):
-        state = random.choice([State.ROCK, State.PAPER, State.SCISSORS])
-        x = random.randint(BALL_RADIUS, WIDTH - BALL_RADIUS)
-        y = random.randint(BALL_RADIUS, HEIGHT - BALL_RADIUS)
-        angle = random.uniform(0, 2 * math.pi)  # Random initial direction
-        if state == State.ROCK:
-            image = ROCK_IMAGE
-        elif state == State.PAPER:
-            image = PAPER_IMAGE
-        else:
-            image = SCISSORS_IMAGE
-        players.append({'state': state, 'x': x, 'y': y, 'angle': angle, 'image': image})
+    game_active = True
+    for _ in range(NUM_PLAYERS_EACH_TEAM):
+        for state in State:
+            x = random.randint(BALL_RADIUS, WIDTH - BALL_RADIUS)
+            y = random.randint(BALL_RADIUS, HEIGHT - BALL_RADIUS)
+            angle = random.uniform(0, 2 * math.pi)  # Random initial direction
+            if state == State.ROCK:
+                image = ROCK_IMAGE
+            elif state == State.PAPER:
+                image = PAPER_IMAGE
+            else:
+                image = SCISSORS_IMAGE
+            players.append({'state': state, 'x': x, 'y': y, 'angle': angle, 'image': image})
 
 reset_game()
 
 clock = pygame.time.Clock()
 
 async def main():
+    global game_active
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                reset_game()
         screen.fill(WHITE)
         for player in players:
             x, y, angle, state, image = player['x'], player['y'], player['angle'], player['state'], player['image']
@@ -93,8 +103,10 @@ async def main():
                 angle += 0.05 * angle_diff
 
             # Update the ball's position
-            x += BALL_SPEED * math.cos(angle)
-            y += BALL_SPEED * math.sin(angle)
+            bonus_speed = 0.3 if random.random() < 0.1 else 0 
+                
+            x += (BALL_SPEED + bonus_speed) * math.cos(angle)
+            y += (BALL_SPEED + bonus_speed) * math.sin(angle)
 
             # Bounce off the walls
             if x - BALL_RADIUS <= 0 or x + BALL_RADIUS >= WIDTH:
@@ -117,7 +129,6 @@ async def main():
                         elif state == State.SCISSORS and other_player['state'] == State.PAPER:
                             other_player['state'] = State.SCISSORS
                             other_player['image'] = SCISSORS_IMAGE
-
             player['x'] = x
             player['y'] = y
             player['angle'] = angle
@@ -125,11 +136,16 @@ async def main():
             # Draw the ball
             screen.blit(image, (int(x - BALL_RADIUS), int(y - BALL_RADIUS)))
 
+            text = font.render("Press SPACE to reset", True, (0, 0, 0))
+            text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            if not game_active:
+                screen.blit(text, text_rect)
+
         pygame.display.flip()
         clock.tick(FPS)
-
-        # Check if all players have the same state
         if all(player['state'] == players[0]['state'] for player in players):
-            reset_game()
+            game_active = False
+
+            pygame.display.flip()
         await asyncio.sleep(0)
 asyncio.run(main())
