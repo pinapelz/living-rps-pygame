@@ -14,11 +14,10 @@ pygame.init()
 
 
 # Constants
-WIDTH, HEIGHT = 800, 600
-FPS = 60
-BALL_RADIUS = 10
-NUM_BALLS = 40
-BALL_SPEED = 1 
+WIDTH, HEIGHT = 500, 500
+FPS = 30
+BALL_RADIUS = 20
+BALL_SPEED = 1
 COUNT = 0
 CHANCE_OF_CHASE = 0.6
 NUM_PLAYERS_EACH_TEAM = 20
@@ -43,6 +42,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Living RPS Clone")
 game_active = True
 players = []
+message = ""
 
 def reset_game():
     global players
@@ -66,8 +66,11 @@ reset_game()
 
 clock = pygame.time.Clock()
 
+
+
 async def main():
     global game_active
+    global message
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -103,7 +106,7 @@ async def main():
                 angle += 0.05 * angle_diff
 
             # Update the ball's position
-            bonus_speed = 0.3 if random.random() < 0.1 else 0 
+            bonus_speed = 0.4 if random.random() < 0.1 else 0
                 
             x += (BALL_SPEED + bonus_speed) * math.cos(angle)
             y += (BALL_SPEED + bonus_speed) * math.sin(angle)
@@ -114,6 +117,7 @@ async def main():
             if y - BALL_RADIUS <= 0 or y + BALL_RADIUS >= HEIGHT:
                 angle = -angle
 
+            # Check for collisions with other balls
             # Check for collisions with other balls
             for other_player in players:
                 if player != other_player:
@@ -137,6 +141,7 @@ async def main():
             screen.blit(image, (int(x - BALL_RADIUS), int(y - BALL_RADIUS)))
 
             text = font.render("Press SPACE to reset", True, (0, 0, 0))
+
             text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
             if not game_active:
                 screen.blit(text, text_rect)
@@ -145,7 +150,11 @@ async def main():
         clock.tick(FPS)
         if all(player['state'] == players[0]['state'] for player in players):
             game_active = False
-
+        
+        if not any(player['state'] == State.ROCK for player in players) or \
+                not any(player['state'] == State.PAPER for player in players) or \
+                not any(player['state'] == State.SCISSORS for player in players):
+            game_active = False
             pygame.display.flip()
         await asyncio.sleep(0)
 asyncio.run(main())
